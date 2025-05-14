@@ -1,5 +1,14 @@
 # 🧾 Expense Tracker CLI (Python)
 
+![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white)
+![JSON](https://img.shields.io/badge/JSON-Storage-lightgrey?logo=json&logoColor=black)
+![CSV](https://img.shields.io/badge/CSV-Export-green?logo=csv&logoColor=white)
+![datetime](https://img.shields.io/badge/datetime-Date_Handling-orange)
+![collections](https://img.shields.io/badge/collections-Grouping-blueviolet)
+![os](https://img.shields.io/badge/os-File_System-yellow)
+![VS Code](https://img.shields.io/badge/Editor-VS_Code-blue?logo=visualstudiocode&logoColor=white)
+![Git](https://img.shields.io/badge/Git-Version_Control-red?logo=git&logoColor=white)
+
 A fully-featured, command-line Expense Tracker written in Python. This application helps you manage your personal expenses by allowing you to add, view, edit, search, summarize, and export your expense data — all stored locally in a JSON file and optionally exportable to CSV.
 
 ---
@@ -28,16 +37,16 @@ ExpenseTracker/
 ```
 ---
 
-## 🛠️ Tech Stack & Tools
+## 🛠️ Tech Stack
 
-![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-Storage-lightgrey?logo=json&logoColor=black)
-![CSV](https://img.shields.io/badge/CSV-Export-green?logo=csv&logoColor=white)
-![Datetime](https://img.shields.io/badge/datetime-Date_Handling-orange)
-![OS](https://img.shields.io/badge/os-File_System-yellow)
-![Collections](https://img.shields.io/badge/collections-Grouping-blueviolet)
-![VS Code](https://img.shields.io/badge/Editor-VS_Code-blue?logo=visualstudiocode&logoColor=white)
-![Git](https://img.shields.io/badge/Git-Version_Control-red?logo=git&logoColor=white)
+- **Language**: Python 3.x
+
+### 🧰 Built-in Libraries Used
+- `json` – for persistent local storage of expenses  
+- `csv` – to export data to spreadsheet-readable format  
+- `datetime` – for parsing and filtering dates in summaries  
+- `collections.defaultdict` – to group expenses by category  
+- `os` – to handle file creation and path checks
 
 ---
 
