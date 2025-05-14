@@ -11,7 +11,7 @@ FILE_NAME = "expenses.json"
 def init_file():
     if not os.path.exists(FILE_NAME):
         with open(FILE_NAME, "w") as f:
-            json.dump([], f
+            json.dump([], f)
 
 # Load existing expenses
 def load_expenses():
