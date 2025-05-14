@@ -30,14 +30,14 @@ ExpenseTracker/
 
 ## 🛠️ Tech Stack
 
-- **Python 3.x**
+- **Language**: Python 3.x
 
-### 🧰 Built-in Modules Used
-- `json`
-- `csv`
-- `datetime`
-- `collections.defaultdict`
-- `os`
+### 🧰 Built-in Libraries Used
+- `json` – for persistent local storage of expenses
+- `csv` – to export data to spreadsheet-readable format
+- `datetime` – for parsing and filtering dates in summaries
+- `collections.defaultdict` – to group expenses by category
+- `os` – to handle file creation and path checks
 
 ---
 
