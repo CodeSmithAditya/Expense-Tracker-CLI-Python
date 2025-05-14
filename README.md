@@ -1,13 +1,12 @@
 # 🧾 Expense Tracker CLI (Python)
 
-![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-Storage-lightgrey?logo=json&logoColor=black)
-![CSV](https://img.shields.io/badge/CSV-Export-green?logo=csv&logoColor=white)
-![datetime](https://img.shields.io/badge/datetime-Date_Handling-orange)
-![collections](https://img.shields.io/badge/collections-Grouping-blueviolet)
-![os](https://img.shields.io/badge/os-File_System-yellow)
-![VS Code](https://img.shields.io/badge/Editor-VS_Code-blue?logo=visualstudiocode&logoColor=white)
-![Git](https://img.shields.io/badge/Git-Version_Control-red?logo=git&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/JSON-Storage-lightgrey?logo=json&logoColor=black" alt="JSON" />
+  <img src="https://img.shields.io/badge/CSV-Export-green?logo=csv&logoColor=white" alt="CSV" />
+  <img src="https://img.shields.io/badge/Git-Version_Control-red?logo=git&logoColor=white" alt="Git" />
+  <img src="https://img.shields.io/badge/Editor-VS_Code-blue?logo=visualstudiocode&logoColor=white" alt="VS Code" />
+</p>
 
 A fully-featured, command-line Expense Tracker written in Python. This application helps you manage your personal expenses by allowing you to add, view, edit, search, summarize, and export your expense data — all stored locally in a JSON file and optionally exportable to CSV.
 
