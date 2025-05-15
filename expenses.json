@@ -1,8 +1,14 @@
 [
     {
         "date": "2025-05-13",
-        "category": "Food",
+        "category": "food",
         "amount": 150.5,
-        "note": "Lunch at cafe"
+        "note": "lunch at cafe"
+    },
+    {
+        "date": "2025-05-14",
+        "category": "transport",
+        "amount": 50.0,
+        "note": "bus ticket"
     }
 ]

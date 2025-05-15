@@ -77,18 +77,20 @@ python main.py
 
 ## 📁 Example Expense Entry
 ```json
-{
-  "date": "13-05-2025",
-  "category": "Food",
-  "amount": 150.50,
-  "note": "Lunch at cafe"
-}
-{
-  "date": "14-05-2025",
-  "category": "Transport",
-  "amount": 50.0,
-  "note": "Bus ticket"
-}
+[
+  {
+    "date": "2025-05-13",
+    "category": "food",
+    "amount": 150.5,
+    "note": "lunch at cafe"
+  },
+  {
+    "date": "2025-05-14",
+    "category": "transport",
+    "amount": 50.0,
+    "note": "bus ticket"
+  }
+]
 ```
 ---
 
