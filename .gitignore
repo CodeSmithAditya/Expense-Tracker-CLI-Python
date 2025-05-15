@@ -1,0 +1,27 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+
+# VS Code
+.vscode/
+
+# Distribution
+build/
+dist/
+*.spec
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python virtual environments
+venv/
+env/
+
+# Logs and test output
+*.log
+
+# IDE backups
+*.swp
+*.bak
+

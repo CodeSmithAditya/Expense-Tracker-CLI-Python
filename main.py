@@ -4,28 +4,29 @@ import csv
 from collections import defaultdict
 from datetime import datetime
 
-# File path for storing expenses
 FILE_NAME = "expenses.json"
 
-# Initialize file if it doesn't exist
 def init_file():
     if not os.path.exists(FILE_NAME):
         with open(FILE_NAME, "w") as f:
             json.dump([], f)
 
-# Load existing expenses
 def load_expenses():
     with open(FILE_NAME, "r") as f:
         return json.load(f)
 
-# Save expenses
 def save_expenses(data):
     with open(FILE_NAME, "w") as f:
         json.dump(data, f, indent=4)
 
-# Add a new expense
 def add_expense():
-    date = input("Date (YYYY-MM-DD): ")
+    date = input("Date (DD-MM-YYYY): ")
+    try:
+        date_obj = datetime.strptime(date, "%d-%m-%Y")
+        date = date_obj.strftime("%Y-%m-%d")
+    except ValueError:
+        print("❌ Invalid date format. Please use DD-MM-YYYY.")
+        return
     category = input("Category (e.g., Food, Transport): ")
     try:
         amount = float(input("Amount: "))
@@ -46,29 +47,37 @@ def add_expense():
     save_expenses(data)
     print("✅ Expense added!")
 
-# View all expenses
 def view_expenses():
     data = load_expenses()
     if not data:
         print("No expenses found.")
         return
+
+    data.sort(key=lambda x: x["date"])  # Sort by date
     print("\n=== All Expenses ===")
     for i, e in enumerate(data, start=1):
-        print(f"{i}. {e['date']} | {e['category']} | ₹{e['amount']} | {e['note']}")
+        date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        print(f"{i}. {date_display} | {e['category']} | ₹{e['amount']:.2f} | {e['note']}")
 
-# Delete an expense by index
 def delete_expense():
     data = load_expenses()
     view_expenses()
-    idx = int(input("Enter the expense number to delete: ")) - 1
+    try:
+        idx = int(input("Enter the expense number to delete: ")) - 1
+    except ValueError:
+        print("❌ Invalid input. Enter a number.")
+        return
     if 0 <= idx < len(data):
-        removed = data.pop(idx)
-        save_expenses(data)
-        print(f"❌ Deleted: {removed}")
+        confirm = input(f"Are you sure you want to delete: {data[idx]}? (y/n): ").lower()
+        if confirm == 'y':
+            removed = data.pop(idx)
+            save_expenses(data)
+            print(f"❌ Deleted: {removed}")
+        else:
+            print("Deletion canceled.")
     else:
         print("Invalid index!")
 
-# Edit an existing expense by index
 def edit_expense():
     data = load_expenses()
     view_expenses()
@@ -79,7 +88,13 @@ def edit_expense():
         idx = int(input("Enter the expense number to edit: ")) - 1
         if 0 <= idx < len(data):
             print("Leave field blank to keep current value.")
-            date = input(f"New date [{data[idx]['date']}]: ") or data[idx]['date']
+            date_input = input(f"New date [{data[idx]['date']}]: ") or data[idx]['date']
+            try:
+                date_obj = datetime.strptime(date_input, "%d-%m-%Y")
+                date = date_obj.strftime("%Y-%m-%d")
+            except ValueError:
+                print("❌ Invalid date format. Keeping original date.")
+                date = data[idx]['date']
             category = input(f"New category [{data[idx]['category']}]: ") or data[idx]['category']
             amount_input = input(f"New amount [{data[idx]['amount']}]: ")
             try:
@@ -103,7 +118,6 @@ def edit_expense():
     except ValueError:
         print("❌ Please enter a valid number.")
 
-# Show summary report
 def summary_report():
     data = load_expenses()
     if not data:
@@ -123,7 +137,6 @@ def summary_report():
     for cat, amt in category_totals.items():
         print(f"- {cat}: ₹{amt:.2f}")
 
-# Search expenses by keyword
 def search_expenses():
     data = load_expenses()
     if not data:
@@ -139,9 +152,9 @@ def search_expenses():
 
     print(f"\n=== Search Results for '{keyword}' ===")
     for i, e in enumerate(results, start=1):
-        print(f"{i}. {e['date']} | {e['category']} | ₹{e['amount']} | {e['note']}")
+        date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        print(f"{i}. {date_display} | {e['category']} | ₹{e['amount']:.2f} | {e['note']}")
 
-# Summary within a date range
 def date_range_summary():
     data = load_expenses()
     if not data:
@@ -149,11 +162,11 @@ def date_range_summary():
         return
 
     try:
-        start_date = input("Enter start date (YYYY-MM-DD): ")
-        end_date = input("Enter end date (YYYY-MM-DD): ")
+        start_date = input("Enter start date (DD-MM-YYYY): ")
+        end_date = input("Enter end date (DD-MM-YYYY): ")
 
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        start_dt = datetime.strptime(start_date, "%d-%m-%Y")
+        end_dt = datetime.strptime(end_date, "%d-%m-%Y")
 
         total = 0
         category_totals = defaultdict(float)
@@ -174,9 +187,8 @@ def date_range_summary():
             for cat, amt in category_totals.items():
                 print(f"- {cat}: ₹{amt:.2f}")
     except ValueError:
-        print("❌ Invalid date format. Use YYYY-MM-DD.")
+        print("❌ Invalid date format. Use DD-MM-YYYY.")
 
-# Export expenses to CSV
 def export_to_csv():
     data = load_expenses()
     if not data:
@@ -190,11 +202,13 @@ def export_to_csv():
 
         writer.writeheader()
         for expense in data:
-            writer.writerow(expense)
+            # Format date before writing
+            formatted_expense = expense.copy()
+            formatted_expense["date"] = datetime.strptime(expense["date"], "%Y-%m-%d").strftime("%d-%m-%Y")
+            writer.writerow(formatted_expense)
 
     print(f"📁 Expenses exported successfully to '{filename}'")
 
-# Main menu
 def main():
     init_file()
     while True:
@@ -209,26 +223,29 @@ def main():
         print("8. Export to CSV")
         print("9. Exit")
 
+        try:
+            choice = int(input("Choose an option: "))
+        except ValueError:
+            print("❌ Invalid input. Please enter a number.")
+            continue
 
-        choice = input("Choose an option: ")
-
-        if choice == "1":
+        if choice == 1:
             add_expense()
-        elif choice == "2":
+        elif choice == 2:
             view_expenses()
-        elif choice == "3":
+        elif choice == 3:
             delete_expense()
-        elif choice == "4":
+        elif choice == 4:
             edit_expense()
-        elif choice == "5":
+        elif choice == 5:
             summary_report()
-        elif choice == "6":
+        elif choice == 6:
             date_range_summary()
-        elif choice == "7":
+        elif choice == 7:
             search_expenses()
-        elif choice == "8":
+        elif choice == 8:
             export_to_csv()
-        elif choice == "9":
+        elif choice == 9:
             print("Goodbye!")
             break
         else:
