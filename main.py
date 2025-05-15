@@ -36,13 +36,23 @@ def add_expense():
     note = input("Note: ")
 
     expense = {
-        "date": date,
-        "category": category,
-        "amount": amount,
-        "note": note
+    "date": date,
+    "category": category.strip().lower(),
+    "amount": amount,
+    "note": note.strip().lower()
     }
 
     data = load_expenses()
+
+    # Check for duplicates
+    for e in data:
+        if (e["date"] == expense["date"] and
+            e["category"].strip().lower() == expense["category"] and
+            e["amount"] == expense["amount"] and
+            e["note"].strip().lower() == expense["note"]):
+            print("⚠️ Duplicate expense entry detected. Not adding again.")
+            return
+        
     data.append(expense)
     save_expenses(data)
     print("✅ Expense added!")
