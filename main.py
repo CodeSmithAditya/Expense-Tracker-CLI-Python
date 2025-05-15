@@ -88,7 +88,8 @@ def edit_expense():
         idx = int(input("Enter the expense number to edit: ")) - 1
         if 0 <= idx < len(data):
             print("Leave field blank to keep current value.")
-            date_input = input(f"New date [{data[idx]['date']}]: ") or data[idx]['date']
+            stored_date = datetime.strptime(data[idx]['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
+            date_input = input(f"New date [{stored_date}]: ") or stored_date
             try:
                 date_obj = datetime.strptime(date_input, "%d-%m-%Y")
                 date = date_obj.strftime("%Y-%m-%d")
@@ -202,7 +203,6 @@ def export_to_csv():
 
         writer.writeheader()
         for expense in data:
-            # Format date before writing
             formatted_expense = expense.copy()
             formatted_expense["date"] = datetime.strptime(expense["date"], "%Y-%m-%d").strftime("%d-%m-%Y")
             writer.writerow(formatted_expense)

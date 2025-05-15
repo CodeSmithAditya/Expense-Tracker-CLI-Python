@@ -78,10 +78,16 @@ python main.py
 ## 📁 Example Expense Entry
 ```json
 {
-  "date": "2025-05-13",
+  "date": "13-05-2025",
   "category": "Food",
   "amount": 150.50,
   "note": "Lunch at cafe"
+}
+{
+  "date": "14-05-2025",
+  "category": "Transport",
+  "amount": 50.0,
+  "note": "Bus ticket"
 }
 ```
 ---
@@ -89,8 +95,8 @@ python main.py
 ## 📤 Exported CSV Sample
 ```csv
 date,category,amount,note
-2025-05-13,Food,150.5,Lunch at cafe
-2025-05-14,Transport,50.0,Bus ticket
+13-05-2025,Food,150.5,Lunch at cafe
+14-05-2025,Transport,50.0,Bus ticket
 ```
 ---
 
