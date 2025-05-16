@@ -80,7 +80,6 @@ python main.py --backup
 #### 2. **Recommend Running via Terminal**
 Since it's a CLI app, users should ideally run it in a terminal to avoid the window closing immediately:
 
-```md
 > ⚠️ If you're using the `.exe` file, it's best to **run it from a terminal** (CMD or PowerShell).  
 > Double-clicking may cause the console to close immediately after execution.
 
