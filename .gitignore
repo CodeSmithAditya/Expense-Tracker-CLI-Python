@@ -25,4 +25,4 @@ env/
 *.swp
 *.bak
 
-ExpenseTracker_Exports/
+ExpenseTracker_Exports/*.json
