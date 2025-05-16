@@ -1,23 +1,63 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 import csv
 from collections import defaultdict
 from datetime import datetime
+import sys
+from colorama import init, Fore, Style
+init(autoreset=True)
 
-FILE_NAME = "expenses.json"
+EXPORT_DIR = "ExpenseTracker_Exports"
+os.makedirs(EXPORT_DIR, exist_ok=True)
+
+DB_FILE = "expenses.json"
+
+AUTO_BACKUP_ON_EXIT = True  # Set to False to disable auto-backup
+
+ADD = 1
+VIEW = 2
+VIEW_BY_CATEGORY = 3
+DELETE = 4
+EDIT = 5
+SUMMARY = 6
+DATE_RANGE = 7
+SEARCH = 8
+EXPORT = 9
+CLEAR = 10
+EXIT = 11
 
 def init_file():
-    if not os.path.exists(FILE_NAME):
-        with open(FILE_NAME, "w") as f:
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, "w") as f:
             json.dump([], f)
 
 def load_expenses():
-    with open(FILE_NAME, "r") as f:
-        return json.load(f)
+    if not os.path.exists(DB_FILE):
+        return []
+    try:
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print(Fore.YELLOW + "⚠️ Warning: Could not decode JSON file. Starting fresh.")
+        return []
 
 def save_expenses(data):
-    with open(FILE_NAME, "w") as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(DB_FILE, "w") as f:
+            json.dump(data, f, indent=4)
+    except IOError as e:
+        print(Fore.RED + f"❌ Failed to save expenses: {e}")
+
+def get_non_empty_input(prompt):
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value.strip()
+        print(Fore.RED + "❌ Input cannot be empty.")
+
+def normalize_category(cat):
+    return cat.strip().lower()
 
 def add_expense():
     date = input("Date (DD-MM-YYYY): ")
@@ -25,21 +65,33 @@ def add_expense():
         date_obj = datetime.strptime(date, "%d-%m-%Y")
         date = date_obj.strftime("%Y-%m-%d")
     except ValueError:
-        print("❌ Invalid date format. Please use DD-MM-YYYY.")
+        print(Fore.RED + "❌ Invalid date format. Please use DD-MM-YYYY.")
         return
-    category = input("Category (e.g., Food, Transport): ")
+
+    category = normalize_category(get_non_empty_input("Category (e.g., Food, Transport): "))
+    if not category:
+        print(Fore.RED + "❌ Category cannot be empty.")
+        return
+
     try:
-        amount = float(input("Amount: "))
+        amount = float(input("Amount: ").strip())
+        if amount <= 0:
+            print(Fore.RED + "❌ Amount must be greater than zero.")
+            return
     except ValueError:
-        print("❌ Invalid amount. Please enter a number.")
+        print(Fore.RED + "❌ Invalid amount. Please enter a number.")
         return
-    note = input("Note: ")
+
+    note = get_non_empty_input("Note: ").strip().lower()
+    if not note:
+        print(Fore.RED + "❌ Note cannot be empty.")
+        return
 
     expense = {
-    "date": date,
-    "category": category.strip().lower(),
-    "amount": amount,
-    "note": note.strip().lower()
+        "date": date,
+        "category": category,
+        "amount": amount,
+        "note": note
     }
 
     data = load_expenses()
@@ -50,49 +102,77 @@ def add_expense():
             e["category"].strip().lower() == expense["category"] and
             e["amount"] == expense["amount"] and
             e["note"].strip().lower() == expense["note"]):
-            print("⚠️ Duplicate expense entry detected. Not adding again.")
+            print(Fore.YELLOW + "⚠️ Duplicate expense entry detected. Not adding again.")
             return
-        
+
     data.append(expense)
     save_expenses(data)
-    print("✅ Expense added!")
+    print(Fore.GREEN + f"✅ Expense added: {category.title()}, ₹{amount:.2f} on {date_obj.strftime('%d-%m-%Y')}")
 
 def view_expenses():
     data = load_expenses()
     if not data:
-        print("No expenses found.")
+        print(Fore.YELLOW + "⚠️ No expenses found.")
         return
 
     data.sort(key=lambda x: x["date"])  # Sort by date
-    print("\n=== All Expenses ===")
+    print(Fore.BLUE + Style.BRIGHT + "\n=== All Expenses ===")
     for i, e in enumerate(data, start=1):
         date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
-        print(f"{i}. {date_display} | {e['category']} | ₹{e['amount']:.2f} | {e['note']}")
+        print(f"{i}. {date_display} | {e['category'].title()} | ₹{e['amount']:.2f} | {e['note'].capitalize()}")
+    
+    total = sum(e["amount"] for e in data)
+    print(Fore.CYAN + f"\n💰 Total: ₹{total:.2f}")
+
+def view_by_category():
+    category = normalize_category(get_non_empty_input("Enter category to filter by: "))
+    data = load_expenses()
+
+    filtered = [e for e in data if normalize_category(e["category"]) == category]
+    if not filtered:
+        print(Fore.YELLOW + f"⚠️ No expenses found in category: {category.title()}")
+        return
+
+    filtered.sort(key=lambda x: x["date"])
+    print(Fore.BLUE + Style.BRIGHT + f"\n=== Expenses in Category: {category.title()} ===")
+    for i, e in enumerate(filtered, start=1):
+        date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        print(f"{i}. {date_display} | ₹{e['amount']:.2f} | {e['note'].capitalize()}")
+
+    total = sum(e["amount"] for e in filtered)
+    print(Fore.CYAN + f"\n💰 Total in {category.title()}: ₹{total:.2f}")
 
 def delete_expense():
     data = load_expenses()
+    if not data:
+        print(Fore.YELLOW + "⚠️ No expenses found.")
+        return
     view_expenses()
     try:
         idx = int(input("Enter the expense number to delete: ")) - 1
     except ValueError:
-        print("❌ Invalid input. Enter a number.")
+        print(Fore.RED + "❌ Invalid input. Enter a number.")
         return
     if 0 <= idx < len(data):
-        confirm = input(f"Are you sure you want to delete: {data[idx]}? (y/n): ").lower()
+        e = data[idx]
+        date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        summary = f"{date_display} | {e['category'].title()} | ₹{e['amount']:.2f} | {e['note'].capitalize()}"
+        confirm = input(f"Are you sure you want to delete:\n{summary} ? (y/n): ").lower()
         if confirm == 'y':
             removed = data.pop(idx)
             save_expenses(data)
-            print(f"❌ Deleted: {removed}")
+            print(Fore.RED + f"❌ Deleted expense on {date_display}: {e['category'].title()}, ₹{e['amount']:.2f}, {e['note'].capitalize()}")
         else:
             print("Deletion canceled.")
     else:
-        print("Invalid index!")
+        print(Fore.RED + "Invalid index!")
 
 def edit_expense():
     data = load_expenses()
-    view_expenses()
     if not data:
+        print(Fore.YELLOW + "⚠️ No expenses found.")
         return
+    view_expenses()
 
     try:
         idx = int(input("Enter the expense number to edit: ")) - 1
@@ -104,72 +184,80 @@ def edit_expense():
                 date_obj = datetime.strptime(date_input, "%d-%m-%Y")
                 date = date_obj.strftime("%Y-%m-%d")
             except ValueError:
-                print("❌ Invalid date format. Keeping original date.")
+                print(Fore.RED + "❌ Invalid date format. Keeping original date.")
                 date = data[idx]['date']
-            category = input(f"New category [{data[idx]['category']}]: ") or data[idx]['category']
+            category_input = input(f"New category [{data[idx]['category'].title()}]: ")
+            category = normalize_category(category_input) if category_input else data[idx]['category']
             amount_input = input(f"New amount [{data[idx]['amount']}]: ")
-            try:
-                amount = float(amount_input) if amount_input else data[idx]['amount']
-            except ValueError:
-                print("❌ Invalid amount. Keeping original value.")
+            if amount_input:
+                try:
+                    amount = float(amount_input)
+                    if amount <= 0:
+                        print(Fore.RED + "❌ Amount must be greater than zero.")
+                        return
+                except ValueError:
+                    print(Fore.RED + "❌ Invalid amount. Keeping original value.")
+                    amount = data[idx]['amount']
+            else:
                 amount = data[idx]['amount']
-            note = input(f"New note [{data[idx]['note']}]: ") or data[idx]['note']
+            note = (input(f"New note [{data[idx]['note'].capitalize()}]: ") or data[idx]['note']).strip().lower()
 
             data[idx] = {
                 "date": date,
-                "category": category,
+                "category": category.strip().lower(),
                 "amount": amount,
-                "note": note
+                "note": note.strip().lower()
             }
 
             save_expenses(data)
-            print("✏️ Expense updated.")
+            print(Fore.GREEN + "✏️ Expense updated.")
         else:
-            print("Invalid index.")
+            print(Fore.RED + "❌ Invalid index.")
     except ValueError:
-        print("❌ Please enter a valid number.")
+        print(Fore.RED + "❌ Please enter a valid number.")
 
 def summary_report():
     data = load_expenses()
     if not data:
-        print("No expenses to summarize.")
+        print(Fore.YELLOW + "⚠️ No expenses to summarize.")
         return
 
     total = 0
+    # When summing per category:
     category_totals = defaultdict(float)
 
     for expense in data:
         total += expense["amount"]
         category_totals[expense["category"]] += expense["amount"]
 
-    print("\n=== Expense Summary ===")
-    print(f"Total Spent: ₹{total:.2f}")
+    print(Fore.BLUE + Style.BRIGHT + "\n=== Expense Summary ===")
+    print(Fore.CYAN + f"Total Spent: ₹{total:.2f}")
     print("\nSpent by Category:")
     for cat, amt in category_totals.items():
-        print(f"- {cat}: ₹{amt:.2f}")
+        print(f"- {cat.title()}: ₹{amt:.2f}")
 
 def search_expenses():
     data = load_expenses()
     if not data:
-        print("No expenses found.")
+        print(Fore.YELLOW + "⚠️ No expenses found.")
         return
 
     keyword = input("Enter keyword to search (category or note): ").lower()
     results = [e for e in data if keyword in e["category"].lower() or keyword in e["note"].lower()]
 
     if not results:
-        print("No matching expenses found.")
+        print(Fore.YELLOW + "⚠️ No matching expenses found.")
         return
 
-    print(f"\n=== Search Results for '{keyword}' ===")
+    print(Fore.CYAN + Style.BRIGHT + f"\n=== 🔍 Search Results for '{keyword}' ===")
     for i, e in enumerate(results, start=1):
         date_display = datetime.strptime(e['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
-        print(f"{i}. {date_display} | {e['category']} | ₹{e['amount']:.2f} | {e['note']}")
+        print(f"{i}. {date_display} | {e['category'].title()} | ₹{e['amount']:.2f} | {e['note'].capitalize()}")
 
 def date_range_summary():
     data = load_expenses()
     if not data:
-        print("No expenses to summarize.")
+        print(Fore.YELLOW + "⚠️ No expenses to summarize.")
         return
 
     try:
@@ -179,10 +267,14 @@ def date_range_summary():
         start_dt = datetime.strptime(start_date, "%d-%m-%Y")
         end_dt = datetime.strptime(end_date, "%d-%m-%Y")
 
+        if end_dt < start_dt:
+            print(Fore.RED + "❌ End date cannot be earlier than start date.")
+            return
+
         total = 0
         category_totals = defaultdict(float)
 
-        print(f"\n=== Summary from {start_date} to {end_date} ===")
+        print(Fore.BLUE + Style.BRIGHT + f"\n=== Summary from {start_date} to {end_date} ===")
 
         for expense in data:
             exp_date = datetime.strptime(expense["date"], "%Y-%m-%d")
@@ -193,73 +285,140 @@ def date_range_summary():
         if total == 0:
             print("No expenses found in this range.")
         else:
-            print(f"Total Spent: ₹{total:.2f}")
+            print(Fore.CYAN + f"Total Spent: ₹{total:.2f}")
             print("Spent by Category:")
             for cat, amt in category_totals.items():
-                print(f"- {cat}: ₹{amt:.2f}")
+                print(f"- {cat.title()}: ₹{amt:.2f}")
     except ValueError:
-        print("❌ Invalid date format. Use DD-MM-YYYY.")
+        print(Fore.RED + "❌ Invalid date format. Use DD-MM-YYYY.")
 
 def export_to_csv():
     data = load_expenses()
     if not data:
-        print("No data to export.")
+        print(Fore.YELLOW + "⚠️ No data to export.")
         return
 
-    filename = "expenses.csv"
-    with open(filename, mode="w", newline="", encoding="utf-8") as csv_file:
-        fieldnames = ["date", "category", "amount", "note"]
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    # Timestamped filename for unique backups
+    filename = os.path.join(EXPORT_DIR, f"expenses_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv")
 
-        writer.writeheader()
-        for expense in data:
-            formatted_expense = expense.copy()
-            formatted_expense["date"] = datetime.strptime(expense["date"], "%Y-%m-%d").strftime("%d-%m-%Y")
-            writer.writerow(formatted_expense)
+    try:
+        with open(filename, mode="w", newline="", encoding="utf-8") as csv_file:
+            fieldnames = ["date", "category", "amount", "note"]
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
-    print(f"📁 Expenses exported successfully to '{filename}'")
+            writer.writeheader()
+            for expense in data:
+                formatted_expense = expense.copy()
+                formatted_expense["date"] = datetime.strptime(expense["date"], "%Y-%m-%d").strftime("%d-%m-%Y")
+                formatted_expense["amount"] = f"{expense['amount']:.2f}"
+                formatted_expense["category"] = expense["category"].title()
+                formatted_expense["note"] = expense["note"].capitalize()
+                writer.writerow(formatted_expense)
+
+        print(Fore.GREEN + f"📁 Expenses exported successfully to '{filename}'")
+    except IOError as e:
+        print(Fore.RED + f"❌ Failed to export CSV: {e}")
+
+def backup_expenses():
+    data = load_expenses()
+    if not data:
+        print(Fore.YELLOW + "⚠️ No expenses to back up.")
+        return
+
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    backup_filename = os.path.join(EXPORT_DIR, f"expenses_backup_{timestamp}.json")
+
+    try:
+        with open(backup_filename, "w") as f:
+            json.dump(data, f, indent=4)
+        print(Fore.MAGENTA + f"📦 Backup created at '{backup_filename}'")
+    except IOError as e:
+        print(Fore.RED + f"❌ Backup failed: {e}")
 
 def main():
     init_file()
+
+    # Support CLI arguments: --export or --backup
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--export":
+            export_to_csv()
+            return
+        elif sys.argv[1] == "--backup":
+            backup_expenses()
+            return
+        else:
+            print(Fore.RED + "❌ Unknown command-line option.")
+            print("✅ Available options: --export, --backup")
+        return
+
     while True:
-        print("\n=== Expense Tracker Menu ===")
+        print(Fore.BLUE + Style.BRIGHT + "\n=== Expense Tracker Menu ===")
         print("1. Add Expense")
         print("2. View Expenses")
-        print("3. Delete Expense")
-        print("4. Edit Expense")
-        print("5. Summary Report")
-        print("6. Summary by Date Range")
-        print("7. Search Expenses")
-        print("8. Export to CSV")
-        print("9. Exit")
+        print("3. View Expenses by Category")
+        print("4. Delete Expense")
+        print("5. Edit Expense")
+        print("6. Summary Report")
+        print("7. Summary by Date Range")
+        print("8. Search Expenses")
+        print("9. Export to CSV")
+        print("10. Clear All Expenses")
+        print("11. Exit")
 
         try:
             choice = int(input("Choose an option: "))
         except ValueError:
-            print("❌ Invalid input. Please enter a number.")
+            print(Fore.RED + "❌ Invalid input. Please enter a number.")
             continue
 
-        if choice == 1:
+        if choice == ADD:
             add_expense()
-        elif choice == 2:
+        elif choice == VIEW:
             view_expenses()
-        elif choice == 3:
+        elif choice == VIEW_BY_CATEGORY:
+            view_by_category()
+        elif choice == DELETE:
             delete_expense()
-        elif choice == 4:
+        elif choice == EDIT:
             edit_expense()
-        elif choice == 5:
+        elif choice == SUMMARY:
             summary_report()
-        elif choice == 6:
+        elif choice == DATE_RANGE:
             date_range_summary()
-        elif choice == 7:
+        elif choice == SEARCH:
             search_expenses()
-        elif choice == 8:
+        elif choice == EXPORT:
             export_to_csv()
-        elif choice == 9:
+        elif choice == CLEAR:
+            confirm = input(Fore.YELLOW + "⚠️ This will DELETE ALL expenses. Back them up first? (y/n): ").lower()
+            if confirm == 'y':
+                backup_expenses()
+            final_confirm = input("Are you sure you want to delete ALL expenses? (y/n): ").lower()
+            if final_confirm == 'y':
+                save_expenses([])
+                print(Fore.GREEN + "🗑️ All expenses cleared.")
+            else:
+                print(Fore.RED + "❌ Clear operation canceled.")
+        elif choice == EXIT:
+            if AUTO_BACKUP_ON_EXIT:
+                print(Fore.MAGENTA + "📦 Auto-backup before exit...")
+                backup_expenses()
+                print(Fore.GREEN + "✅ Exit complete. See you again!")
             print("Goodbye!")
             break
+
         else:
             print("Invalid choice. Try again.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        if AUTO_BACKUP_ON_EXIT:
+            print(Fore.MAGENTA + "\n📦 Auto-backup triggered by Ctrl+C...")
+            backup_expenses()
+        print("\n👋 Program exited by user.")
+    finally:
+        # Prevents immediate console close on double-click
+        if not sys.stdin.isatty():
+            input(Fore.YELLOW + "\n🔚 Press Enter to close this window...")
