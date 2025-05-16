@@ -41,14 +41,14 @@ ExpenseTracker/
 - **Language**: Python 3.x
 
 ### 🧰 Python Libraries Used
-#### ✅ Built-in Modules
+### ✅ Built-in Modules
 - `json` – for persistent local storage of expenses  
 - `csv` – to export data to spreadsheet-readable format  
 - `datetime` – for parsing and filtering dates in summaries  
 - `collections.defaultdict` – to group expenses by category  
 - `os` – to handle file creation and path checks
 - `sys` – to handle command-line arguments
-#### 🌈 External Module
+### 🌈 External Module
 - `colorama` – to add colorful text formatting in the terminal (used for improved UX)
 ```bash
 pip install colorama
@@ -77,7 +77,7 @@ python main.py --export
 python main.py --backup
 ```
 
-#### 2. **Recommend Running via Terminal**
+####  **Recommend Running via Terminal**
 Since it's a CLI app, users should ideally run it in a terminal to avoid the window closing immediately:
 
 > ⚠️ If you're using the `.exe` file, it's best to **run it from a terminal** (CMD or PowerShell).  
