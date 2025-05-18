@@ -11,9 +11,10 @@ init(autoreset=True)
 EXPORT_DIR = "ExpenseTracker_Exports"
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-DB_FILE = "expenses.json"
+DB_FILE = os.path.join(EXPORT_DIR, "expenses.json")
 
 AUTO_BACKUP_ON_EXIT = True  # Set to False to disable auto-backup
+MAX_BACKUPS = 3              # <— keep the newest 3 backups
 
 ADD = 1
 VIEW = 2
@@ -25,7 +26,8 @@ DATE_RANGE = 7
 SEARCH = 8
 EXPORT = 9
 CLEAR = 10
-EXIT = 11
+RESTORE = 11
+EXIT = 12
 
 def init_file():
     if not os.path.exists(DB_FILE):
@@ -59,8 +61,21 @@ def get_non_empty_input(prompt):
 def normalize_category(cat):
     return cat.strip().lower()
 
+def abort_if_quit(user_input: str) -> bool:
+    """
+    Return True if the user entered 'q' or 'Q'.
+    The caller should immediately return to the main loop.
+    """
+    if user_input.lower() == "q":
+        print(Fore.YELLOW + "↩️  Returning to main menu...")
+        return True
+    return False
+
 def add_expense():
-    date = input("Date (DD-MM-YYYY): ")
+    raw = input("Date (DD-MM-YYYY) or 'q' to cancel: ").strip()
+    if abort_if_quit(raw):
+        return
+    date = raw
     try:
         date_obj = datetime.strptime(date, "%d-%m-%Y")
         date = date_obj.strftime("%Y-%m-%d")
@@ -125,7 +140,10 @@ def view_expenses():
     print(Fore.CYAN + f"\n💰 Total: ₹{total:.2f}")
 
 def view_by_category():
-    category = normalize_category(get_non_empty_input("Enter category to filter by: "))
+    raw = get_non_empty_input("Enter category to filter by (or 'q' to cancel): ")
+    if abort_if_quit(raw):
+        return
+    category = normalize_category(raw)
     data = load_expenses()
 
     filtered = [e for e in data if normalize_category(e["category"]) == category]
@@ -148,8 +166,11 @@ def delete_expense():
         print(Fore.YELLOW + "⚠️ No expenses found.")
         return
     view_expenses()
+    raw = input("Enter the expense number to delete (or 'q' to cancel): ").strip()
+    if abort_if_quit(raw):
+        return
     try:
-        idx = int(input("Enter the expense number to delete: ")) - 1
+        idx = int(raw) - 1
     except ValueError:
         print(Fore.RED + "❌ Invalid input. Enter a number.")
         return
@@ -174,8 +195,12 @@ def edit_expense():
         return
     view_expenses()
 
+    raw = input("Enter the expense number to edit (or 'q' to cancel): ").strip()
+    if abort_if_quit(raw):
+        return
+
     try:
-        idx = int(input("Enter the expense number to edit: ")) - 1
+        idx = int(raw) - 1
         if 0 <= idx < len(data):
             print("Leave field blank to keep current value.")
             stored_date = datetime.strptime(data[idx]['date'], "%Y-%m-%d").strftime("%d-%m-%Y")
@@ -242,7 +267,10 @@ def search_expenses():
         print(Fore.YELLOW + "⚠️ No expenses found.")
         return
 
-    keyword = input("Enter keyword to search (category or note): ").lower()
+    raw = input("Enter keyword to search (or 'q' to cancel): ").strip()
+    if abort_if_quit(raw):
+        return
+    keyword = raw.lower()
     results = [e for e in data if keyword in e["category"].lower() or keyword in e["note"].lower()]
 
     if not results:
@@ -261,8 +289,13 @@ def date_range_summary():
         return
 
     try:
-        start_date = input("Enter start date (DD-MM-YYYY): ")
-        end_date = input("Enter end date (DD-MM-YYYY): ")
+        raw_start = input("Enter start date (DD-MM-YYYY) or 'q' to cancel: ").strip()
+        if abort_if_quit(raw_start):
+            return
+        raw_end = input("Enter end date (DD-MM-YYYY) or 'q' to cancel: ").strip()
+        if abort_if_quit(raw_end):
+            return
+        start_date, end_date = raw_start, raw_end
 
         start_dt = datetime.strptime(start_date, "%d-%m-%Y")
         end_dt = datetime.strptime(end_date, "%d-%m-%Y")
@@ -322,18 +355,71 @@ def export_to_csv():
 def backup_expenses():
     data = load_expenses()
     if not data:
-        print(Fore.YELLOW + "⚠️ No expenses to back up.")
-        return
+        return  # Silent skip if nothing to back up
 
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    backup_filename = os.path.join(EXPORT_DIR, f"expenses_backup_{timestamp}.json")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    backup_file = os.path.join(EXPORT_DIR, f"expenses_backup_{timestamp}.json")
 
     try:
-        with open(backup_filename, "w") as f:
+        with open(backup_file, "w") as f:
             json.dump(data, f, indent=4)
-        print(Fore.MAGENTA + f"📦 Backup created at '{backup_filename}'")
+        print(Fore.MAGENTA + f"📦 Backup saved as '{os.path.basename(backup_file)}'")
     except IOError as e:
         print(Fore.RED + f"❌ Backup failed: {e}")
+
+    # Keep only the last MAX_BACKUPS
+    backups = sorted(
+        [f for f in os.listdir(EXPORT_DIR) if f.startswith("expenses_backup_") and f.endswith(".json")],
+        key=lambda name: os.path.getmtime(os.path.join(EXPORT_DIR, name)),
+        reverse=True
+    )
+    for old_backup in backups[MAX_BACKUPS:]:
+        try:
+            os.remove(os.path.join(EXPORT_DIR, old_backup))
+        except Exception:
+            pass
+    
+    print(Fore.CYAN + f"🗃️ {min(len(backups), MAX_BACKUPS)} total backup(s) available.")
+
+def restore_from_backup():
+    """
+    Let the user pick one of the most-recent backups (up to MAX_BACKUPS shown)
+    and overwrite expenses.json with the chosen snapshot.
+    """
+    backups = sorted(
+        [
+            f for f in os.listdir(EXPORT_DIR)
+            if f.startswith("expenses_backup_") and f.endswith(".json")
+        ],
+        key=lambda name: os.path.getmtime(os.path.join(EXPORT_DIR, name)),
+        reverse=True
+    )
+
+    if not backups:
+        print(Fore.YELLOW + "⚠️ No backups available to restore.")
+        return
+
+    print(Fore.BLUE + "\nAvailable Backups:")
+    for i, file in enumerate(backups[:MAX_BACKUPS], 1):
+        print(f"{i}. {file}")
+
+    print(Fore.YELLOW + "👉 Choose wisely! This will overwrite your current expenses.json.")
+
+    try:
+        choice = int(input("Choose backup number to restore (0 to cancel): "))
+        if choice == 0:
+            print("Restore cancelled.")
+            return
+        if 1 <= choice <= len(backups[:MAX_BACKUPS]):
+            backup_file = os.path.join(EXPORT_DIR, backups[choice - 1])
+            with open(backup_file, "r") as f:
+                restored_data = json.load(f)
+            save_expenses(restored_data)
+            print(Fore.GREEN + f"✅ Restored data from '{backups[choice - 1]}'.")
+        else:
+            print(Fore.RED + "❌ Invalid selection.")
+    except (ValueError, json.JSONDecodeError):
+        print(Fore.RED + "❌ Invalid input or corrupted backup.")
 
 def main():
     init_file()
@@ -363,7 +449,8 @@ def main():
         print("8. Search Expenses")
         print("9. Export to CSV")
         print("10. Clear All Expenses")
-        print("11. Exit")
+        print("11. Restore from Backup")
+        print("12. Exit")
 
         try:
             choice = int(input("Choose an option: "))
@@ -390,21 +477,22 @@ def main():
         elif choice == EXPORT:
             export_to_csv()
         elif choice == CLEAR:
-            confirm = input(Fore.YELLOW + "⚠️ This will DELETE ALL expenses. Back them up first? (y/n): ").lower()
-            if confirm == 'y':
-                backup_expenses()
+            print(Fore.YELLOW + "⚠️ Creating a last-minute backup before deletion...")
+            backup_expenses()
             final_confirm = input("Are you sure you want to delete ALL expenses? (y/n): ").lower()
             if final_confirm == 'y':
                 save_expenses([])
                 print(Fore.GREEN + "🗑️ All expenses cleared.")
             else:
                 print(Fore.RED + "❌ Clear operation canceled.")
+        elif choice == RESTORE:
+            restore_from_backup()
         elif choice == EXIT:
             if AUTO_BACKUP_ON_EXIT:
                 print(Fore.MAGENTA + "📦 Auto-backup before exit...")
                 backup_expenses()
                 print(Fore.GREEN + "✅ Exit complete. See you again!")
-            print("Goodbye!")
+            print(Fore.GREEN + Style.BRIGHT + "\n👋 Thank you for using Expense Tracker! Goodbye!\n")
             break
 
         else:

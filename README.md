@@ -129,9 +129,37 @@ date,category,amount,note
 ```
 ---
 
+## 🤝 Contributing
+
+Contributions are very welcome! To get started:
+
+1. Fork this repository  
+2. Create a new branch:  
+   ```bash
+   git checkout -b feature/YourFeatureName
+   ```
+3. Make your changes and commit them:
+   ```bash
+   git commit -m "Add some feature"
+   ```
+4. Push to your fork:
+   ```bash
+   git push origin feature/YourFeatureName
+   ```
+5. Open a Pull Request against the main branch of this repo.
+
+### Please make sure your PR:
+- Has a clear title and description
+- Includes tests or manual test instructions if applicable
+- Follows the existing code style
+
+Feel free to open an issue first if you want to discuss a larger change.
+
+---
+
 ## 📄 License
 
-This project is open-source and free to use.
+This project is licensed under the [MIT License](LICENSE). See the LICENSE file for details.
 
 ---
 
